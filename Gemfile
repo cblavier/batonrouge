@@ -12,3 +12,12 @@ gem 'redis'
 # tools
 gem 'slackbotsy'
 gem 'newrelic_rpm'
+
+group :development do
+  gem 'sinatra-reloader'
+end
+
+group :test do
+  gem 'rspec'
+  gem 'mocha'
+end
