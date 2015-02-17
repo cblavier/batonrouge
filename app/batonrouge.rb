@@ -4,7 +4,7 @@ require 'newrelic_rpm'
 require 'redis'
 require 'slackbotsy'
 
-set :redis_url, ENV.fetch('REDISTOGO_URL') { 'redis://localhost'}
+set :redis_url, ENV.fetch('REDIS_URL') { 'redis://localhost'}
 set :redis_set, 'scores'
 
 set :slack_channel,          ENV.fetch('SLACK_CHANNEL')           { 'test'}
