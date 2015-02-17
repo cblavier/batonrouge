@@ -11,3 +11,4 @@ gem 'redis'
 
 # tools
 gem 'slackbotsy'
+gem 'newrelic_rpm'
