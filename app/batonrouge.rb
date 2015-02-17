@@ -87,7 +87,7 @@ end
 def bot
   @bot ||= Slackbotsy::Bot.new({
     'channel'          => settings.slack_channel,
-    'name'             => settings.bot_name,
+    'name'             => settings.slack_bot_name,
     'incoming_webhook' => settings.slack_incoming_webhook,
     'outgoing_token'   => settings.slack_outgoing_token
   })
