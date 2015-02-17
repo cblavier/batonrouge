@@ -31,7 +31,7 @@ describe "Baton Rouge" do
 
   describe "help" do
 
-    it "prints help" do
+    it "says help" do
       post "/", text: "help"
       expect(last_response).to be_ok
       expect(last_response.body).to_not be_empty
@@ -42,15 +42,24 @@ describe "Baton Rouge" do
   describe "give batonrouge" do
 
     it "gives 1 batonrouge" do
-      Sinatra::Application.any_instance.expects(:print).with("#{user} a maintenant 1 baton rouge")
-      post "/", text: "#{user} 1"
+      Sinatra::Application.any_instance.expects(:say).with("#{user} a maintenant 1 baton rouge")
+      post "/", text: "#{user}"
       expect(last_response).to be_ok
+      expect(last_response.body).to be_empty
+    end
+
+    it "gives 2 batonrouge" do
+      Sinatra::Application.any_instance.expects(:say).with("#{user} a maintenant 2 batons rouges")
+      post "/", text: "#{user} 2"
+      expect(last_response).to be_ok
+      expect(last_response.body).to be_empty
     end
 
     it "gives 5 batonrouge" do
-      Sinatra::Application.any_instance.expects(:print).with("#{user} a maintenant 5 batons rouges")
+      Sinatra::Application.any_instance.expects(:say).with("#{user} a maintenant 5 batons rouges")
       post "/", text: "#{user} 5"
       expect(last_response).to be_ok
+      expect(last_response.body).to be_empty
     end
 
     context "with existing score" do
@@ -62,15 +71,17 @@ describe "Baton Rouge" do
       end
 
       it "removes batonrouges" do
-        Sinatra::Application.any_instance.expects(:print).with("#{user} a maintenant #{score - 2} batons rouges")
+        Sinatra::Application.any_instance.expects(:say).with("#{user} a maintenant #{score - 2} batons rouges")
         post "/", text: "#{user} -2"
         expect(last_response).to be_ok
+        expect(last_response.body).to be_empty
       end
 
       it "prevents score to go below 0" do
-        Sinatra::Application.any_instance.expects(:print).with("#{user} a maintenant 0 baton rouge")
+        Sinatra::Application.any_instance.expects(:say).with("#{user} a maintenant 0 baton rouge")
         post "/", text: "#{user} -10"
         expect(last_response).to be_ok
+        expect(last_response.body).to be_empty
       end
 
     end
@@ -84,10 +95,10 @@ describe "Baton Rouge" do
     end
 
     it "removes user" do
-      Sinatra::Application.any_instance.expects(:print).with("#{user} n'est plus dans le classement")
       post "/", text: "remove #{user}"
       expect(last_response).to be_ok
       expect(redis.zscore redis_set, user).to be_nil
+      expect(last_response.body).to eq("#{user} n'est plus dans le classement")
     end
 
   end
@@ -101,18 +112,28 @@ describe "Baton Rouge" do
       redis.zadd redis_set, 2, other_user
       redis.zadd redis_set, 0, yet_another_user
       redis.zadd redis_set, 5, user
-
     end
 
-    it "prints ranking" do
+    it "says ranking" do
       expectaction = <<-EOS
 #{user}: 5 batons rouges
 #{other_user}: 2 batons rouges
 #{yet_another_user}: 0 baton rouge
 EOS
-      Sinatra::Application.any_instance.expects(:print).with(expectaction)
+      Sinatra::Application.any_instance.expects(:say).with(expectaction)
       post "/", text: "ranking"
       expect(last_response).to be_ok
+      expect(last_response.body).to be_empty
+    end
+
+  end
+
+  describe "invalid command" do
+
+    it "shows invalid command" do
+      post "/", text: "#{user} 12 15"
+      expect(last_response).to be_ok
+      expect(last_response.body).to eq("Commande invalide")
     end
 
   end

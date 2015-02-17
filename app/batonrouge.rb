@@ -15,11 +15,11 @@ set :slack_outgoing_token,   ENV.fetch('SLACK_OUTGOING_TOKEN')    { :missing_sla
 post '/' do
   check_authorization(params['token'])
   case params['text']
-  when /^\s*help\s*$/;                        print_help
-  when /^\s*ranking\s*$/;                     print_ranking
-  when /^\s*remove\s*(\w+)\s*$/;              remove_user($1)    { |user| print("#{user} n'est plus dans le classement") }
-  when /^\s*@?(\w+)\s*((?:-|\+)?\d+)?\s*$/;   incr_score($1, $2) { |user, score| print("#{user} a maintenant #{x(score, 'baton rouge')}") }
-  else                                        print("Commande inconnue")
+  when /^\s*help\s*$/;                        show_help
+  when /^\s*ranking\s*$/;                     say_ranking
+  when /^\s*remove\s*(\w+)\s*$/;              remove_user($1)    { |user| "#{user} n'est plus dans le classement" }
+  when /^\s*@?(\w+)\s*((?:-|\+)?\d+)?\s*$/;   incr_score($1, $2) { |user, score| say("#{user} a maintenant #{x(score, 'baton rouge')}") }
+  else                                        "Commande invalide"
   end
 end
 
@@ -31,7 +31,7 @@ def check_authorization(token)
   end
 end
 
-def print_help
+def show_help
   <<-eos
 /batonrouge [username]           Donne un batonrouge à un utilisateur
 /batonrouge [username] -1        Retire un batonrouge à un utilisateur
@@ -42,6 +42,7 @@ eos
 end
 
 def incr_score(user, count = 1)
+  count = Integer(count) rescue 1
   new_score = (redis.zincrby settings.redis_set, count.to_i, user).to_i
   if new_score < 0
     redis.zadd settings.redis_set, 0, user
@@ -55,19 +56,19 @@ def remove_user(user)
   yield(user) if block_given?
 end
 
-def print_ranking
+def say_ranking
   scores = redis.zscan(settings.redis_set, 0)[1].reverse
   ranking_text = scores.map {|score| "#{score[0]}: #{x(score[1].to_i, 'baton rouge')}" }
-  print ranking_text.join("\n").concat("\n")
+  say ranking_text.join("\n").concat("\n")
 end
 
-def print(text)
+def say(text)
   if settings.development?
     puts text
   elsif settings.production?
     bot.say text
   end
-  text
+  nil
 end
 
 def x(n, singular, plural=nil)
