@@ -128,9 +128,9 @@ describe "Baton Rouge" do
     it "says ranking" do
       ranking_text = <<-EOS
 Ok, voici le classement complet :
-0 - #{user}: 5 batons rouges
-1 - #{other_user}: 2 batons rouges
-2 - #{yet_another_user}: 0 baton rouge
+1 - #{user}: 5 batons rouges
+2 - #{other_user}: 2 batons rouges
+3 - #{yet_another_user}: 0 baton rouge
 EOS
       expects_say ranking_text
       post "/", text: "ranking"
