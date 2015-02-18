@@ -32,6 +32,7 @@ GEM
       rack
     rack-test (0.6.3)
       rack (>= 1.0)
+    rake (10.4.2)
     redis (3.2.1)
     rspec (3.1.0)
       rspec-core (~> 3.1.0)
@@ -86,8 +87,10 @@ DEPENDENCIES
   mocha
   newrelic_rpm
   puma
+  rake
   redis
   rspec
+  rspec-support
   sinatra
   sinatra-reloader
   slack-api
