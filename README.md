@@ -1,6 +1,12 @@
 # :heavy_exclamation_mark: Baton Rouge :heavy_exclamation_mark:
 A slack bot to give "batons rouges" to your teammates. In our situation we award each others with baton rouges after any awful joke!
 
+{<img src="https://secure.travis-ci.org/cblavier/batonrouge.png?branch=master" />}[http://travis-ci.org/cblavier/batonrouge]
+
+{<img src="https://codeclimate.com/github/cblavier/batonrouge.png" />}[https://codeclimate.com/github/cblavier/batonrouge]
+
+{<img src="https://codeclimate.com/github/cblavier/batonrouge/coverage.png" />}[https://codeclimate.com/github/cblavier/batonrouge]
+
 ## User guide
 
 On slack, use `/batonrouge help` command to get started.

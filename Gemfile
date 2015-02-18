@@ -21,4 +21,5 @@ end
 group :test do
   gem 'rspec'
   gem 'mocha'
+  gem "codeclimate-test-reporter"
 end
