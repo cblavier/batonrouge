@@ -1,5 +1,9 @@
-# batonrouge
-A slack bot to give "batons rouges" to your teammates
+# :heavy_exclamation_mark: Baton Rouge :heavy_exclamation_mark:
+A slack bot to give "batons rouges" to your teammates. In our situation we award each others with baton rouges after any awful joke!
+
+
+
+## Technical part
 
 batonrouge is a Sinatra app that runs seamlessly on Heroku (just add any Redis addon to you app)
 
