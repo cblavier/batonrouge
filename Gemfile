@@ -12,6 +12,7 @@ gem 'redis'
 # tools
 gem 'slackbotsy'
 gem 'newrelic_rpm'
+gem 'slack-api'
 
 group :development do
   gem 'sinatra-reloader'

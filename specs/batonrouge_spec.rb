@@ -2,14 +2,14 @@ require File.expand_path "../spec_helper.rb", __FILE__
 
 describe "Baton Rouge" do
 
-  let(:redis_set) { "test_scores" }
+  let(:redis_scores_key) { "test_scores" }
   let(:redis)     { app.send(:redis) }
   let(:user)      { "foo" }
 
   before do
-    app.set :redis_set, redis_set
+    app.set :redis_scores_key, redis_scores_key
     app.set :slack_outgoing_token, nil
-    redis.del(redis_set)
+    redis.del(redis_scores_key)
   end
 
   describe "authorization" do
@@ -45,54 +45,77 @@ describe "Baton Rouge" do
   describe "give batonrouge" do
 
     let(:current_score) { 5 }
-    let(:user_name)     { 'bar' }
+    let(:other_user)    { 'bar' }
+    let(:inc)           { "" }
+    let(:team_members)  { [user, other_user] }
+    let(:command)       { post "/", text: "#{user} #{inc}", user_name: other_user }
 
     before do
-      redis.zadd redis_set, current_score, user
+      redis.zadd redis_scores_key, current_score, user
+      Sinatra::Application.any_instance.stubs(:team_members).returns(team_members)
     end
 
     after do
-      post "/", text: "#{user} #{inc}", user_name: user_name
       expect(last_response).to be_ok
-      expect(last_response.body).to be_empty
     end
 
-    context "with no increment" do
+    context "with a valid user" do
 
-      let(:inc) { "" }
+      after do
+        expect(last_response.body).to be_empty
+      end
 
-      it "gives 1 batonrouge" do
-        expects_say("Oh! #{user_name} a donné 1 baton à #{user}. #{user} a maintenant #{current_score + 1} batons rouges")
+      context "with no increment" do
+
+        it "gives 1 batonrouge" do
+          expects_say("Oh! #{other_user} a donné 1 baton à #{user}. #{user} a maintenant #{current_score + 1} batons rouges")
+          command
+        end
+
+      end
+
+      context "with a 2 increment" do
+
+        let(:inc) { 2 }
+
+        it "gives 1 batonrouge" do
+          expects_say("Oh! #{other_user} a donné #{inc} batons à #{user}. #{user} a maintenant #{current_score + inc} batons rouges")
+          command
+        end
+
+      end
+
+      context "with a -2 increment" do
+
+        let(:inc) { -2 }
+
+        it "removes 2 batonrouge" do
+          expects_say("Ouf, #{other_user} a retiré #{-inc} batons à #{user}. #{user} a maintenant #{current_score + inc} batons rouges")
+          command
+        end
+
+      end
+
+      context "with a -10 increment" do
+
+        let(:inc) { -10 }
+
+        it "removes batons rouges but does not go below 0" do
+          expects_say("Ouf, #{other_user} a retiré #{-inc} batons à #{user}. #{user} a maintenant 0 baton rouge")
+          command
+        end
+
       end
 
     end
 
-    context "with a 2 increment" do
+    context "when awarding a wrong user" do
 
-      let(:inc) { 2 }
+      let(:team_members) { [] }
 
-      it "gives 1 batonrouge" do
-        expects_say("Oh! #{user_name} a donné #{inc} batons à #{user}. #{user} a maintenant #{current_score + inc} batons rouges")
-      end
-
-    end
-
-    context "with a -2 increment" do
-
-      let(:inc) { -2 }
-
-      it "removes 2 batonrouge" do
-        expects_say("Ouf, #{user_name} a retiré #{-inc} batons à #{user}. #{user} a maintenant #{current_score + inc} batons rouges")
-      end
-
-    end
-
-    context "with a -10 increment" do
-
-      let(:inc) { -10 }
-
-      it "removes batons rouges but does not go below 0" do
-        expects_say("Ouf, #{user_name} a retiré #{-inc} batons à #{user}. #{user} a maintenant 0 baton rouge")
+      it "returns a warning message" do
+        command
+        expect(last_response.body).to eq("Désolé, #{user} ne fait pas partie de l'équipe")
       end
 
     end
@@ -102,13 +125,13 @@ describe "Baton Rouge" do
   describe "removes user" do
 
     before do
-      redis.zadd redis_set, rand(10), user
+      redis.zadd redis_scores_key, rand(10), user
     end
 
     it "removes user" do
       post "/", text: "remove #{user}"
       expect(last_response).to be_ok
-      expect(redis.zscore redis_set, user).to be_nil
+      expect(redis.zscore redis_scores_key, user).to be_nil
       expect(last_response.body).to eq("#{user} n'est plus dans le classement")
     end
 
@@ -120,9 +143,9 @@ describe "Baton Rouge" do
     let(:yet_another_user) { "fizz" }
 
     before do
-      redis.zadd redis_set, 2, other_user
-      redis.zadd redis_set, 0, yet_another_user
-      redis.zadd redis_set, 5, user
+      redis.zadd redis_scores_key, 2, other_user
+      redis.zadd redis_scores_key, 0, yet_another_user
+      redis.zadd redis_scores_key, 5, user
     end
 
     it "says ranking" do
