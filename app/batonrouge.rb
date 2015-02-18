@@ -40,6 +40,10 @@ post '/' do
   end
 end
 
+get '/ping' do
+  'pong'
+end
+
 def check_authorization(token)
   if token != settings.slack_outgoing_token
     error 403 do
