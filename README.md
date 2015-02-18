@@ -1,7 +1,9 @@
 # :heavy_exclamation_mark: Baton Rouge :heavy_exclamation_mark:
 A slack bot to give "batons rouges" to your teammates. In our situation we award each others with baton rouges after any awful joke!
 
+## User guide
 
+On slack, use `/batonrouge help` command to get started.
 
 ## Technical part
 
@@ -13,5 +15,6 @@ You need to set following environment variables :
 - SLACK_CHANNEL: channel where bot will print teammates scores
 - SLACK_INCOMING_WEBHOOK: the webhook the bot will use to speak on Slack (configure in Slack integrations)
 - SLACK_OUTGOING_TOKEN: the token passed by slack command to your app
+- SLACK_API_TOKEN: a different token, used to fetch team members using Slack web API
 
 You also need to configure a slack command (in Slack integrations) that will post to your app (on '/')

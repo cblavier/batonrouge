@@ -2,13 +2,17 @@ require File.expand_path "../spec_helper.rb", __FILE__
 
 describe "Baton Rouge" do
 
-  let(:redis_scores_key) { "test_scores" }
-  let(:redis)     { app.send(:redis) }
-  let(:user)      { "foo" }
+  let(:redis_scores_key)  { "test_scores" }
+  let(:redis_members_key) { "test_team_members"}
+  let(:redis)             { app.send(:redis) }
+  let(:user)              { "foo" }
 
   before do
-    app.set :redis_scores_key, redis_scores_key
+    app.set :redis_scores_key,     redis_scores_key
+    app.set :redis_members_key,    redis_members_key
     app.set :slack_outgoing_token, nil
+    app.stubs(:bot).raises("bot should not be called during tests")
+    app.stubs(:slack_api_client).raises("slack should not be called during tests")
     redis.del(redis_scores_key)
   end
 
@@ -51,8 +55,8 @@ describe "Baton Rouge" do
     let(:command)       { post "/", text: "#{user} #{inc}", user_name: other_user }
 
     before do
-      redis.zadd redis_scores_key, current_score, user
-      Sinatra::Application.any_instance.stubs(:team_members).returns(team_members)
+      redis.zadd redis_scores_key, current_score, user # we set a score for user
+      redis.set  redis_members_key, team_members.join(',') # we set team_members
     end
 
     after do

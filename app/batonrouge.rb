@@ -45,6 +45,8 @@ post '/' do
   end
 end
 
+# This endpoint is for newrelic.
+# Newrelic will frequently ping the app, making our Heroku worker always awaken.
 get '/ping' do
   'pong'
 end
@@ -91,7 +93,6 @@ def say_ranking
 end
 
 def say(text)
-  puts "in say"
   if settings.development?
     puts text
   elsif settings.production?
@@ -110,19 +111,8 @@ def x(n, singular, plural=nil)
   end
 end
 
-def redis
-  @redis ||= Redis.new(url: settings.redis_url)
-end
-
-def bot
-  @bot ||= Slackbotsy::Bot.new({
-    'channel'          => settings.slack_channel,
-    'name'             => settings.slack_bot_name,
-    'incoming_webhook' => settings.slack_incoming_webhook,
-    'outgoing_token'   => settings.slack_outgoing_token
-  })
-end
-
+# We use Redis expire command to cache the slack API call to users_list.
+# Cache timeout is settings.redis_members_expiration, in seconds.
 def team_members
   if team_members = redis.get(settings.redis_members_key)
     team_members = team_members.split(',')
@@ -136,6 +126,19 @@ end
 
 def team_member?(username)
   team_members.include?(username)
+end
+
+def redis
+  @redis ||= Redis.new(url: settings.redis_url)
+end
+
+def bot
+  @bot ||= Slackbotsy::Bot.new({
+    'channel'          => settings.slack_channel,
+    'name'             => settings.slack_bot_name,
+    'incoming_webhook' => settings.slack_incoming_webhook,
+    'outgoing_token'   => settings.slack_outgoing_token
+  })
 end
 
 def slack_api_client
