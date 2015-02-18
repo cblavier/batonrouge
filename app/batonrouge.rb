@@ -14,12 +14,29 @@ set :slack_outgoing_token,   ENV.fetch('SLACK_OUTGOING_TOKEN')    { :missing_sla
 
 post '/' do
   check_authorization(params['token'])
+  current_user = params['user_name']
   case params['text']
-  when /^\s*help\s*$/;                        show_help
-  when /^\s*ranking\s*$/;                     say_ranking
-  when /^\s*remove\s*(\w+)\s*$/;              remove_user($1)    { |user| "#{user} n'est plus dans le classement" }
-  when /^\s*@?(\w+)\s*((?:-|\+)?\d+)?\s*$/;   incr_score($1, $2) { |user, score| say("#{user} a maintenant #{x(score, 'baton rouge')}") }
-  else                                        "Commande invalide"
+  when /^\s*help\s*$/
+    get_help_text
+  when /^\s*ranking\s*$/
+    say_ranking
+  when /^\s*remove\s*@?(\w+)\s*$/
+    remove_user($1)
+    "#{$1} n'est plus dans le classement"
+  when /^\s*@?(\w+)\s*((?:-|\+)?\d+)?\s*$/
+    user = $1
+    inc = Integer($2) rescue 1
+    incr_score(user, inc) do |score|
+      text = if inc && inc < 0
+        "Ouf, #{current_user} a retiré #{x(-inc, 'baton')} à #{user}. "
+      else
+        "Oh! #{current_user} a donné #{x(inc, 'baton')} à #{user}. "
+      end
+      text.concat("#{user} a maintenant #{x(score, 'baton rouge')}")
+      say text
+    end
+  else
+    "Commande invalide"
   end
 end
 
@@ -31,35 +48,37 @@ def check_authorization(token)
   end
 end
 
-def show_help
+def get_help_text
   <<-eos
-/batonrouge [username]           Donne un batonrouge à un utilisateur
-/batonrouge [username] -1        Retire un batonrouge à un utilisateur
-/batonrouge remove [username]    Retire un utilisateur du classement
-/batonrouge ranking              Affiche le classement
-/batonrouge help                 Affiche ce message
+/batonrouge [username] - Donne un batonrouge à un utilisateur
+/batonrouge [username] -1 - Retire un batonrouge à un utilisateur
+/batonrouge remove [username] - Retire un utilisateur du classement
+/batonrouge ranking - Affiche le classement
+/batonrouge help - Affiche cette aide
 eos
 end
 
-def incr_score(user, count = 1)
-  count = Integer(count) rescue 1
-  new_score = (redis.zincrby settings.redis_set, count.to_i, user).to_i
+def incr_score(user, count)
+  new_score = (redis.zincrby settings.redis_set, count, user).to_i
   if new_score < 0
     redis.zadd settings.redis_set, 0, user
     new_score = 0
   end
-  yield(user, new_score) if block_given?
+  yield(new_score) if block_given?
 end
 
 def remove_user(user)
   redis.zrem settings.redis_set, user
-  yield(user) if block_given?
 end
 
 def say_ranking
   scores = redis.zscan(settings.redis_set, 0)[1].reverse
-  ranking_text = scores.map {|score| "#{score[0]}: #{x(score[1].to_i, 'baton rouge')}" }
-  say ranking_text.join("\n").concat("\n")
+  ranking_text = "Ok, voici le classement complet :\n"
+  scores.each.with_index do |score, i|
+    ranking_text.concat "#{i} - #{score[0]}: #{x(score[1].to_i, 'baton rouge')}"
+    ranking_text.concat "\n"
+  end
+  say ranking_text
 end
 
 def say(text)
