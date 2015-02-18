@@ -1,11 +1,8 @@
 # :heavy_exclamation_mark: Baton Rouge :heavy_exclamation_mark:
 A slack command to give "batons rouges" to your teammates. In our situation we award each others with baton rouges after any awful joke!
 
-{<img src="https://secure.travis-ci.org/cblavier/batonrouge.png?branch=master" />}[http://travis-ci.org/cblavier/batonrouge]
+[![Code Climate](https://codeclimate.com/github/cblavier/batonrouge/badges/gpa.svg)](https://codeclimate.com/github/cblavier/batonrouge) [![Build Status](https://travis-ci.org/cblavier/batonrouge.svg?branch=master)](https://travis-ci.org/cblavier/batonrouge) [![Coverage Status](https://codeclimate.com/github/cblavier/batonrouge/coverage.svg?branch=master)](https://codeclimate.com/github/cblavier/batonrouge)
 
-{<img src="https://codeclimate.com/github/cblavier/batonrouge.png" />}[https://codeclimate.com/github/cblavier/batonrouge]
-
-{<img src="https://codeclimate.com/github/cblavier/batonrouge/coverage.png" />}[https://codeclimate.com/github/cblavier/batonrouge]
 
 ## User guide
 
