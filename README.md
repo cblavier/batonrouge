@@ -1,5 +1,5 @@
 # :heavy_exclamation_mark: Baton Rouge :heavy_exclamation_mark:
-A slack bot to give "batons rouges" to your teammates. In our situation we award each others with baton rouges after any awful joke!
+A slack command to give "batons rouges" to your teammates. In our situation we award each others with baton rouges after any awful joke!
 
 ## User guide
 
