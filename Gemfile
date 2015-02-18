@@ -14,6 +14,7 @@ gem 'slackbotsy'
 gem 'newrelic_rpm'
 gem 'slack-api'
 gem 'rake'
+gem 'rspec-support'
 
 group :development do
   gem 'sinatra-reloader'
@@ -21,7 +22,6 @@ end
 
 group :test do
   gem 'rspec'
-  gem 'rspec-support'
   gem 'mocha'
   gem "codeclimate-test-reporter"
 end
