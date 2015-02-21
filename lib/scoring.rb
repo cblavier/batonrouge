@@ -41,9 +41,9 @@ class Scoring
   private
 
   def increment_user_score(user, increment)
-    new_score = (redis.zincrby settings.redis_scores_key, incr, user).to_i
+    new_score = (redis.zincrby settings.redis_scores_key, increment, user).to_i
     if new_score < 0
-      redis.zadd settings.redis_scores_key, 0, user_to_award
+      redis.zadd settings.redis_scores_key, 0, user
       new_score = 0
     end
     new_score

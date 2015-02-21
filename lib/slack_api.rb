@@ -22,17 +22,28 @@ class SlackApi
   # We use Redis expire command to cache the slack API call to users_list.
   # Cache timeout is settings.redis_members_expiration, in seconds.
   def team_members
-    if team_members = redis.get(settings.redis_members_key)
-      team_members = team_members.split(',')
-    else
-      team_members = slack_api_client.users_list['members'].map{ |member| member['name'] }
-      redis.set settings.redis_members_key, team_members.join(',')
-      redis.pexpire settings.redis_members_key, settings.redis_members_expiration
+    unless team_members = get_team_members_from_cache
+      team_members = get_team_members_from_slack
+      set_team_members_in_cache(team_members)
     end
     team_members
   end
 
   private
+
+  def get_team_members_from_cache
+    team_members = redis.get(settings.redis_members_key)
+    team_members.split(',')
+  end
+
+  def get_team_members_from_slack
+    slack_api_client.users_list['members'].map{ |member| member['name'] }
+  end
+
+  def set_team_members_in_cache(team_members)
+    redis.set settings.redis_members_key, team_members.join(',')
+    redis.pexpire settings.redis_members_key, settings.redis_members_expiration
+  end
 
   def bot
     @bot ||= Slackbotsy::Bot.new({
