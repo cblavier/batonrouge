@@ -2,8 +2,9 @@ require 'sinatra'
 require "sinatra/reloader" if development?
 require 'newrelic_rpm'
 require 'redis'
-require 'slackbotsy'
-require 'slack'
+
+require_relative '../lib/slack_api.rb'
+require_relative '../lib/game.rb'
 
 set :redis_url,                 ENV.fetch('REDIS_URL')               { 'redis://localhost'}
 set :redis_scores_key,          'scores'
@@ -21,24 +22,19 @@ post '/' do
   current_user = params['user_name']
   case params['text']
   when /^\s*help\s*$/
-    get_help_text
+    help_text
   when /^\s*ranking\s*$/
-    say_ranking
+    slack_api.say(game.ranking)
   when /^\s*remove\s*@?(\w+)\s*$/
-    remove_user($1)
+    game.remove_user($1)
     "#{$1} n'est plus dans le classement"
   when /^\s*@?(\w+)\s*((?:-|\+)?\d+)?\s*$/
     user_to_award = $1
     inc = Integer($2) rescue 1
-    return "Désolé, #{user_to_award} ne fait pas partie de l'équipe" unless team_member?(user_to_award)
-    incr_score(user_to_award, inc) do |score|
-      text = if inc && inc < 0
-        "Ouf, #{current_user} a retiré #{x(-inc, 'baton')} à #{user_to_award}. "
-      else
-        "Oh! #{current_user} a donné #{x(inc, 'baton')} à #{user_to_award}. "
-      end
-      text.concat("#{user_to_award} a maintenant #{x(score, 'baton rouge')}")
-      say text
+    if team_member?(user_to_award)
+      give_baton_rouge(current_user, user_to_award, inc)
+    else
+      "Désolé, #{user_to_award} ne fait pas partie de l'équipe"
     end
   else
     "Commande invalide"
@@ -59,7 +55,23 @@ def check_authorization(token)
   end
 end
 
-def get_help_text
+def team_member?(username)
+  slack_api.team_members.include?(username)
+end
+
+def give_baton_rouge(current_user, user_to_award, inc)
+  game.incr_score(user_to_award, inc) do |score|
+    text = if inc && inc < 0
+      "Ouf, #{current_user} a retiré #{x(-inc, 'baton')} à #{user_to_award}. "
+    else
+      "Oh! #{current_user} a donné #{x(inc, 'baton')} à #{user_to_award}. "
+    end
+    text.concat("#{user_to_award} a maintenant #{x(score, 'baton rouge')}")
+    slack_api.say text
+  end
+end
+
+def help_text
   <<-eos
 /batonrouge [username] - Donne un batonrouge à un utilisateur
 /batonrouge [username] -1 - Retire un batonrouge à un utilisateur
@@ -67,38 +79,6 @@ def get_help_text
 /batonrouge ranking - Affiche le classement
 /batonrouge help - Affiche cette aide
 eos
-end
-
-def incr_score(user, count)
-  new_score = (redis.zincrby settings.redis_scores_key, count, user).to_i
-  if new_score < 0
-    redis.zadd settings.redis_scores_key, 0, user
-    new_score = 0
-  end
-  yield(new_score) if block_given?
-end
-
-def remove_user(user)
-  redis.zrem settings.redis_scores_key, user
-end
-
-def say_ranking
-  scores = redis.zscan(settings.redis_scores_key, 0)[1].reverse
-  ranking_text = "Ok, voici le classement complet :\n"
-  scores.each.with_index do |score, i|
-    ranking_text.concat "#{i + 1} - #{score[0]}: #{x(score[1].to_i, 'baton rouge')}"
-    ranking_text.concat "\n"
-  end
-  say ranking_text
-end
-
-def say(text)
-  if settings.development?
-    puts text
-  elsif settings.production?
-    bot.say text
-  end
-  nil
 end
 
 def x(n, singular, plural=nil)
@@ -111,40 +91,14 @@ def x(n, singular, plural=nil)
   end
 end
 
-# We use Redis expire command to cache the slack API call to users_list.
-# Cache timeout is settings.redis_members_expiration, in seconds.
-def team_members
-  if team_members = redis.get(settings.redis_members_key)
-    team_members = team_members.split(',')
-  else
-    team_members = slack_api_client.users_list['members'].map{ |member| member['name'] }
-    redis.set settings.redis_members_key, team_members.join(',')
-    redis.expire settings.redis_members_key, settings.redis_members_expiration
-  end
-  team_members
+def game
+  @game ||= Game.new(settings, redis)
 end
 
-def team_member?(username)
-  team_members.include?(username)
+def slack_api
+  @slack_api ||= SlackApi.new(settings, redis)
 end
 
 def redis
   @redis ||= Redis.new(url: settings.redis_url)
-end
-
-def bot
-  @bot ||= Slackbotsy::Bot.new({
-    'channel'          => settings.slack_channel,
-    'name'             => settings.slack_bot_name,
-    'incoming_webhook' => settings.slack_incoming_webhook,
-    'outgoing_token'   => settings.slack_outgoing_token
-  })
-end
-
-def slack_api_client
-  @slack_api_client ||= Slack.configure do |config|
-    config.token = settings.slack_api_token
-  end
-  raise "Invalid slack_api_token: #{settings.slack_api_token}" unless Slack.auth_test['ok']
-  Slack
 end

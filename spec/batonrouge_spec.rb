@@ -180,5 +180,5 @@ EOS
 end
 
 def expects_say(text)
-  Sinatra::Application.any_instance.expects(:say).with(text)
+  SlackApi.any_instance.expects(:say).with(text)
 end
