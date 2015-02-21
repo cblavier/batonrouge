@@ -2,18 +2,24 @@ require File.expand_path "../spec_helper.rb", __FILE__
 
 describe "Baton Rouge" do
 
-  let(:redis_scores_key)  { "test_scores" }
-  let(:redis_members_key) { "test_team_members"}
-  let(:redis)             { app.send(:redis) }
-  let(:user)              { "foo" }
+  let(:redis_scores_key)    { "test_scores" }
+  let(:redis_members_key)   { "test_team_members"}
+  let(:redis_rate_limit)    { 0 }
+  let(:redis_rage_cooldown) { 0 }
+  let(:redis)               { app.send(:redis) }
+  let(:user)                { "foo" }
 
   before do
     app.set :redis_scores_key,     redis_scores_key
     app.set :redis_members_key,    redis_members_key
+    app.set :redis_rate_limit,     redis_rate_limit
+    app.set :redis_rage_cooldown,  redis_rage_cooldown
     app.set :slack_outgoing_token, nil
     app.stubs(:bot).raises("bot should not be called during tests")
     app.stubs(:slack_api_client).raises("slack should not be called during tests")
     redis.del(redis_scores_key)
+    redis.keys("rage_cooldown-*").each {|key| redis.del(key)}
+    redis.keys("rate_limit-*").each    {|key| redis.del(key)}
   end
 
   describe "authorization" do
@@ -65,15 +71,12 @@ describe "Baton Rouge" do
 
     context "with a valid user" do
 
-      after do
-        expect(last_response.body).to be_empty
-      end
-
       context "with no increment" do
 
         it "gives 1 batonrouge" do
           expects_say("Oh! #{other_user} a donné 1 baton à #{user}. #{user} a maintenant #{current_score + 1} batons rouges")
           command
+          expect(last_response.body).to be_empty
         end
 
       end
@@ -82,9 +85,9 @@ describe "Baton Rouge" do
 
         let(:inc) { 2 }
 
-        it "gives 1 batonrouge" do
-          expects_say("Oh! #{other_user} a donné #{inc} batons à #{user}. #{user} a maintenant #{current_score + inc} batons rouges")
+        it "returns an error" do
           command
+          expect(last_response.body).to eq("Nan, pas plus d'un baton rouge à la fois !")
         end
 
       end
@@ -96,6 +99,7 @@ describe "Baton Rouge" do
         it "removes 2 batonrouge" do
           expects_say("Ouf, #{other_user} a retiré #{-inc} batons à #{user}. #{user} a maintenant #{current_score + inc} batons rouges")
           command
+          expect(last_response.body).to be_empty
         end
 
       end
@@ -107,6 +111,7 @@ describe "Baton Rouge" do
         it "removes batons rouges but does not go below 0" do
           expects_say("Ouf, #{other_user} a retiré #{-inc} batons à #{user}. #{user} a maintenant 0 baton rouge")
           command
+          expect(last_response.body).to be_empty
         end
 
       end
@@ -124,7 +129,44 @@ describe "Baton Rouge" do
 
     end
 
+    context "with rage cooldown" do
+
+      let(:redis_rage_cooldown) { 50 }
+
+      it "needs user to wait the cooldown to timeout before giving a baton back" do
+        post "/", text: "#{user} #{inc}", user_name: other_user
+        expect(last_response.body).to be_empty
+
+        post "/", text: "#{other_user} #{inc}", user_name: user
+        expect(last_response.body).to eq("Désolé, tu viens de te prendre un baton, tu vas devoir te calmer d'abord ...")
+
+        sleep(redis_rage_cooldown.fdiv(1000))
+        post "/", text: "#{other_user} #{inc}", user_name: user
+        expect(last_response.body).to be_empty
+      end
+
+    end
+
+    context "with rate limit" do
+
+      let(:redis_rate_limit) { 50 }
+
+      it "needs user to wait the cooldown to timeout before giving a baton back" do
+        post "/", text: "#{user} #{inc}", user_name: other_user
+        expect(last_response.body).to be_empty
+
+        post "/", text: "#{user} #{inc}", user_name: other_user
+        expect(last_response.body).to eq("Tout doux, calme toi un peu avant de remettre des batons")
+
+        sleep(redis_rate_limit.fdiv(1000))
+        post "/", text: "#{user} #{inc}", user_name: other_user
+        expect(last_response.body).to be_empty
+      end
+
+    end
+
   end
+
 
   describe "removes user" do
 

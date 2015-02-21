@@ -4,12 +4,14 @@ require 'newrelic_rpm'
 require 'redis'
 
 require_relative '../lib/slack_api.rb'
-require_relative '../lib/game.rb'
+require_relative '../lib/scoring.rb'
 
 set :redis_url,                 ENV.fetch('REDIS_URL')               { 'redis://localhost'}
 set :redis_scores_key,          'scores'
 set :redis_members_key,         'team_members'
-set :redis_members_expiration,  3600
+set :redis_members_expiration,  3_600_000 # in ms
+set :redis_rate_limit,          300_000   # in ms
+set :redis_rage_cooldown,       300_000   # in ms
 
 set :slack_channel,             ENV.fetch('SLACK_CHANNEL')           { 'test'}
 set :slack_bot_name,            ENV.fetch('BOT_NAME')                { 'Baton Rouge' }
@@ -24,17 +26,19 @@ post '/' do
   when /^\s*help\s*$/
     help_text
   when /^\s*ranking\s*$/
-    slack_api.say(game.ranking)
+    slack_api.say(scoring.ranking)
   when /^\s*remove\s*@?(\w+)\s*$/
-    game.remove_user($1)
+    scoring.remove_user($1)
     "#{$1} n'est plus dans le classement"
   when /^\s*@?(\w+)\s*((?:-|\+)?\d+)?\s*$/
     user_to_award = $1
-    inc = Integer($2) rescue 1
-    if team_member?(user_to_award)
-      give_baton_rouge(current_user, user_to_award, inc)
-    else
-      "Désolé, #{user_to_award} ne fait pas partie de l'équipe"
+    incr = Integer($2) rescue 1
+    give_baton_rouge(current_user, user_to_award, incr) do |output|
+      if output[0] == :ok
+        slack_api.say output[1]
+      else
+        output[1]
+      end
     end
   else
     "Commande invalide"
@@ -59,16 +63,27 @@ def team_member?(username)
   slack_api.team_members.include?(username)
 end
 
-def give_baton_rouge(current_user, user_to_award, inc)
-  game.incr_score(user_to_award, inc) do |score|
-    text = if inc && inc < 0
-      "Ouf, #{current_user} a retiré #{x(-inc, 'baton')} à #{user_to_award}. "
-    else
-      "Oh! #{current_user} a donné #{x(inc, 'baton')} à #{user_to_award}. "
+def give_baton_rouge(current_user, user_to_award, incr)
+  output = if incr == 0
+    [:ko, "Super, 0 baton rouge. Rien de mieux à faire ?"]
+  elsif incr > 1
+    [:ko, "Nan, pas plus d'un baton rouge à la fois !"]
+  elsif !team_member?(user_to_award)
+    [:ko, "Désolé, #{user_to_award} ne fait pas partie de l'équipe"]
+  elsif incr > 0 && scoring.rage_cooling_down?(current_user)
+    [:ko, "Désolé, tu viens de te prendre un baton, tu vas devoir te calmer d'abord ..."]
+  elsif incr > 0 && scoring.rate_limited?(current_user)
+    [:ko, "Tout doux, calme toi un peu avant de remettre des batons"]
+  else
+    scoring.increment(current_user, user_to_award, incr) do |new_score|
+      if incr < 0
+         [:ok, "Ouf, #{current_user} a retiré #{x(-incr, 'baton')} à #{user_to_award}. #{user_to_award} a maintenant #{x(new_score, 'baton rouge')}"]
+      else
+        [:ok, "Oh! #{current_user} a donné #{x(incr, 'baton')} à #{user_to_award}. #{user_to_award} a maintenant #{x(new_score, 'baton rouge')}"]
+      end
     end
-    text.concat("#{user_to_award} a maintenant #{x(score, 'baton rouge')}")
-    slack_api.say text
   end
+  yield(output) if block_given?
 end
 
 def help_text
@@ -91,8 +106,8 @@ def x(n, singular, plural=nil)
   end
 end
 
-def game
-  @game ||= Game.new(settings, redis)
+def scoring
+  @scoring ||= Scoring.new(settings, redis)
 end
 
 def slack_api

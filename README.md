@@ -1,6 +1,6 @@
 # :heavy_exclamation_mark: Baton Rouge :heavy_exclamation_mark:
 
-[![Codeship Status](https://codeship.com/projects/d5f65950-99af-0132-1547-764c5db7a55a/status?branch=master)](https://codeship.com/projects/63706) [![Build Status](https://travis-ci.org/cblavier/batonrouge.svg?branch=master)](https://travis-ci.org/cblavier/batonrouge) [![Coverage Status](https://codeclimate.com/github/cblavier/batonrouge/coverage.svg?branch=master)](https://codeclimate.com/github/cblavier/batonrouge)
+[![Codeship Status](https://codeship.com/projects/d5f65950-99af-0132-1547-764c5db7a55a/status?branch=master)](https://codeship.com/projects/63706) [![Build Status](https://travis-ci.org/cblavier/batonrouge.svg?branch=master)](https://travis-ci.org/cblavier/batonrouge) [![Code Quality](https://codeclimate.com/github/cblavier/batonrouge/gpa.svg?branch=master)](https://codeclimate.com/github/cblavier/batonrouge) [![Coverage Status](https://codeclimate.com/github/cblavier/batonrouge/coverage.svg?branch=master)](https://codeclimate.com/github/cblavier/batonrouge)
 
 A slack command to give "batons rouges" to your teammates. In our situation we award each others with baton rouges after any awful joke!
 

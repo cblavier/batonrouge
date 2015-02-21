@@ -27,7 +27,7 @@ class SlackApi
     else
       team_members = slack_api_client.users_list['members'].map{ |member| member['name'] }
       redis.set settings.redis_members_key, team_members.join(',')
-      redis.expire settings.redis_members_key, settings.redis_members_expiration
+      redis.pexpire settings.redis_members_key, settings.redis_members_expiration
     end
     team_members
   end
