@@ -16,16 +16,10 @@ class Scoring
   end
 
   def increment(current_user, user_to_award, incr)
-    new_score = (redis.zincrby settings.redis_scores_key, incr, user_to_award).to_i
-    if new_score < 0
-      redis.zadd settings.redis_scores_key, 0, user_to_award
-      new_score = 0
-    end
+    new_score = increment_user_score(user_to_award, incr)
     if incr > 0
-      redis.set(redis_rage_cooldown_key(user_to_award), true)
-      redis.pexpire(redis_rage_cooldown_key(user_to_award), settings.redis_rage_cooldown)
-      redis.set(redis_rate_limit_key(current_user), true)
-      redis.pexpire(redis_rate_limit_key(current_user), settings.redis_rate_limit)
+      set_rage_cooldown(user_to_award)
+      set_rate_limit(current_user)
     end
     yield(new_score) if block_given?
   end
@@ -45,6 +39,25 @@ class Scoring
   end
 
   private
+
+  def increment_user_score(user, increment)
+    new_score = (redis.zincrby settings.redis_scores_key, incr, user).to_i
+    if new_score < 0
+      redis.zadd settings.redis_scores_key, 0, user_to_award
+      new_score = 0
+    end
+    new_score
+  end
+
+  def set_rage_cooldown(user)
+    redis.set(redis_rage_cooldown_key(user), true)
+    redis.pexpire(redis_rage_cooldown_key(user), settings.redis_rage_cooldown)
+  end
+
+  def set_rate_limit(user)
+    redis.set(redis_rate_limit_key(user), true)
+    redis.pexpire(redis_rate_limit_key(user), settings.redis_rate_limit)
+  end
 
   def redis_rate_limit_key(user)
     "rate_limit-#{user}"
