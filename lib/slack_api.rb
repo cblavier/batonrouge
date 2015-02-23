@@ -32,8 +32,11 @@ class SlackApi
   private
 
   def get_team_members_from_cache
-    team_members = redis.get(settings.redis_members_key)
-    team_members.split(',')
+    if team_members = redis.get(settings.redis_members_key)
+      team_members.split(',')
+    else
+      nil
+    end
   end
 
   def get_team_members_from_slack
