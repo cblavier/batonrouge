@@ -44,8 +44,8 @@ class SlackApi
   end
 
   def set_team_members_in_cache(team_members)
-    redis.set settings.redis_members_key, team_members.join(',')
-    redis.pexpire settings.redis_members_key, settings.redis_members_expiration
+    redis.set(settings.redis_members_key, team_members.join(','))
+    redis.pexpire(settings.redis_members_key, settings.redis_members_expiration)
   end
 
   def bot
