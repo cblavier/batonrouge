@@ -2,7 +2,7 @@
 require 'bundler'
 Bundler.require :default
 
-unless Rails.env.production?
+unless ENV['RACK_ENV'] == 'production'
   Bundler.require :test
   require 'rspec/core/rake_task'
 
@@ -11,7 +11,7 @@ unless Rails.env.production?
       t.pattern = 'spec/**/*_spec.rb'
     end
   end
+
+  task :default => [:spec]
 end
 
-# Default Task
-task :default => [:spec]
