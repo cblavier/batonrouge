@@ -1,8 +1,9 @@
 # Require Bundler
 require 'bundler'
+Bundler.require :default
 
 unless Rails.env.production?
-  Bundler.require :default, :test
+  Bundler.require :test
   require 'rspec/core/rake_task'
 
   if defined?(RSpec)
