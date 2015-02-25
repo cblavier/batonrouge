@@ -34,11 +34,8 @@ post '/' do
     user_to_award = $1
     incr = Integer($2) rescue 1
     give_baton_rouge(current_user, user_to_award, incr) do |output|
-      if output[0] == :ok
-        slack_api.say output[1]
-      else
-        output[1]
-      end
+      slack_api.say output[:say] if output[:say]
+      output[:return]
     end
   else
     "Commande invalide"
@@ -65,23 +62,23 @@ end
 
 def give_baton_rouge(current_user, user_to_award, incr)
   output = if incr == 0
-    [:ko, "Super, 0 baton rouge. Rien de mieux à faire ?"]
+    {return: "Super, 0 baton rouge. Rien de mieux à faire ?"}
   elsif incr > 1
-    [:ko, "Nan, pas plus d'un baton rouge à la fois !"]
+    {return: "Nan, pas plus d'un baton rouge à la fois !"}
   elsif incr < 0 && current_user == user_to_award
-    [:ok, "LOL, #{current_user} a tenté de se retirer un baton :)"]
+    {say: "LOL, #{current_user} a tenté de se retirer un baton :)", return: "Bien fait !" }
   elsif !team_member?(user_to_award)
-    [:ko, "Désolé, #{user_to_award} ne fait pas partie de l'équipe"]
+    {return: "Désolé, #{user_to_award} ne fait pas partie de l'équipe"}
   elsif incr > 0 && scoring.rage_cooling_down?(current_user)
-    [:ko, "Désolé, tu viens de te prendre un baton, tu vas devoir te calmer d'abord ..."]
+    {return: "Désolé, tu viens de te prendre un baton, tu vas devoir te calmer d'abord ..."}
   elsif incr > 0 && scoring.rate_limited?(current_user)
-    [:ko, "Tout doux, calme toi un peu avant de remettre des batons"]
+    {return: "Tout doux, calme toi un peu avant de remettre des batons"}
   else
     scoring.increment(current_user, user_to_award, incr) do |new_score|
       if incr < 0
-         [:ok, "Ouf, #{current_user} a retiré #{x(-incr, 'baton')} à #{user_to_award}. #{user_to_award} a maintenant #{x(new_score, 'baton rouge')}"]
+        {say: "Ouf, #{current_user} a retiré #{x(-incr, 'baton')} à #{user_to_award}. #{user_to_award} a maintenant #{x(new_score, 'baton rouge')}"}
       else
-        [:ok, "Oh! #{current_user} a donné #{x(incr, 'baton')} à #{user_to_award}. #{user_to_award} a maintenant #{x(new_score, 'baton rouge')}"]
+        {say: "Oh! #{current_user} a donné #{x(incr, 'baton')} à #{user_to_award}. #{user_to_award} a maintenant #{x(new_score, 'baton rouge')}"}
       end
     end
   end

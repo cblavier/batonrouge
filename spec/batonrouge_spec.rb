@@ -149,6 +149,7 @@ describe "Baton Rouge" do
         it "it returns a warning message" do
           expects_say("LOL, #{user} a tenté de se retirer un baton :)")
           command
+          expect(last_response.body).to eq("Bien fait !")
         end
 
       end
