@@ -81,6 +81,16 @@ describe "Baton Rouge" do
 
       end
 
+      context "with no increment" do
+
+        it "gives 1 batonrouge" do
+          expects_say("Oh! #{other_user} a donné 1 baton à #{user}. #{user} a maintenant #{current_score + 1} batons rouges")
+          command
+          expect(last_response.body).to be_empty
+        end
+
+      end
+
       context "with a 2 increment" do
 
         let(:inc) { 2 }
@@ -112,6 +122,33 @@ describe "Baton Rouge" do
           expects_say("Ouf, #{other_user} a retiré #{-inc} batons à #{user}. #{user} a maintenant 0 baton rouge")
           command
           expect(last_response.body).to be_empty
+        end
+
+      end
+
+    end
+
+    context "when self awarding" do
+
+      let(:command) { post "/", text: "#{user} #{inc}", user_name: user }
+
+      context "with no increment" do
+
+        it "gives 1 batonrouge" do
+          expects_say("Oh! #{user} a donné 1 baton à #{user}. #{user} a maintenant #{current_score + 1} batons rouges")
+          command
+          expect(last_response.body).to be_empty
+        end
+
+      end
+
+      context "with a -1 increment" do
+
+        let(:inc) { -1 }
+
+        it "it returns a warning message" do
+          expects_say("LOL, #{user} a tenté de se retirer un baton :)")
+          command
         end
 
       end
